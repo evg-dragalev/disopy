@@ -96,7 +96,7 @@ class Subsonic:
         album_songs: list[Song] = []
 
         for song in album_data:
-            album_songs.append(self.build_song(song.attrib))
+            if song.tag == "{http://subsonic.org/restapi}song": album_songs.append(self.build_song(song.attrib))
 
         return album_songs
 
@@ -149,7 +149,7 @@ class Subsonic:
             return None
 
         first_album_result_id: str = only_albums_results[0].attrib["id"]
-        self.info(f'Matched the album "{only_albums_results[0].attrib["title"]}"')
+        self.info(f'Matched the album "{only_albums_results[0].attrib["name"]}"')
 
         return self.get_album(first_album_result_id)
 
