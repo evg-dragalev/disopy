@@ -22,6 +22,8 @@ class Song:
     """Song model"""
 
     title: str
+    song_title: str
+    artist: str 
     stream_url: str
 
 
@@ -76,7 +78,7 @@ class Subsonic:
         stream_url: str = self.build_url("/stream", {**self.params, "id": atrib["id"]})
 
         # Make a model of only the necessary data of the song
-        return Song(title=atrib["title"], stream_url=stream_url)
+        return Song(artist=atrib["artist"], song_title=atrib["title"], title=f'{atrib["artist"]} - {atrib["title"]}', stream_url=stream_url)
     
     def build_playlist(self, atrib: dict[str, str]) -> Playlist:
         duration: int = int(atrib["duration"]) if atrib["duration"].isdigit() else None
@@ -86,6 +88,7 @@ class Subsonic:
             song_count = atrib["songCount"],
             duration = f'{duration // 3600:02}:{duration // 60 % 60:02}:{duration % 60:02}'
         )
+
 
     def ping(self) -> bool:
         """Test if the server is only and return true only if the status is ok."""
