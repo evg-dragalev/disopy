@@ -1,6 +1,6 @@
 from .main import CONFIG
 from .queue import Queue
-from .subsonic import Song, Subsonic
+from .subsonic import Playlist, Song, Subsonic
 from .messages import info, warn, error
 import asyncio
 import sys
@@ -420,6 +420,27 @@ def start_client() -> None:
             queue.add_to_queue(song, interaction)
 
         print_info("Successfully added all the songs from the playlist")
+
+    @tree.command(name="playlists", description="List available playlists")
+    async def playlists(interaction: Interaction):
+
+        playlists: list[Playlist] = subsonic.get_playlists()
+        
+        if len(playlists) == 0:
+            await send_embed(interaction, "List playlists", "There are no playlists available")
+            print_info("Successfully listed playlists")
+            return
+
+        stylized_playlists: list[str] = [
+            f"- **{playlist.name}**\n\t{playlist.comment} *[{playlist.song_count}|{playlist.duration}]*" for i, playlist in enumerate(playlists)
+        ]
+
+        await send_embed(
+            interaction,
+            "List playlists",
+            "\n".join(stylized_playlists),
+        )
+        print_info("Successfully listed playlists")
 
     async def start_bot() -> None:
         async with client:
