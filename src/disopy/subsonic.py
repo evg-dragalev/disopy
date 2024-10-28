@@ -8,6 +8,14 @@ import requests
 import xml.etree.ElementTree as ET
 from colorama import Fore, Style
 
+@dataclass()
+class Playlist:
+    """Playlist model"""
+
+    name: str
+    comment: str
+    song_count: str
+    duration: str
 
 @dataclass()
 class Song:
@@ -69,6 +77,15 @@ class Subsonic:
 
         # Make a model of only the necessary data of the song
         return Song(title=atrib["title"], stream_url=stream_url)
+    
+    def build_playlist(self, atrib: dict[str, str]) -> Playlist:
+        duration: int = atrib["duration"]
+        return Playlist(
+            name = atrib["name"],
+            comment = atrib["comment"],
+            song_count = atrib["songCount"],
+            duration = f'{duration // 3600}:{duration // 60 % 60}:{duration % 60}'
+        )
 
     def ping(self) -> bool:
         """Test if the server is only and return true only if the status is ok."""
@@ -186,3 +203,12 @@ class Subsonic:
         self.info(f'Matched the playlist "{matched_playlist["name"]}"')
 
         return song_list
+
+    def get_playlists(self) -> list[Playlist]:
+        playlists_list: ET.Element = self.xml_request("/getPlaylists", self.params)[0]
+
+        playlists: list[Playlist] = [
+            self.build_playlist(entry.attrib) for entry in playlists_list
+        ]
+
+        return playlists
