@@ -432,7 +432,7 @@ def start_client() -> None:
             return
 
         stylized_playlists: list[str] = [
-            f"- {playlist.name}\n\t{playlist.comment} [{playlist.song_count}|{playlist.duration}]" for i, playlist in enumerate(playlists)
+            f"- **{playlist.name}**\n\t{playlist.comment} *[{playlist.song_count}|{playlist.duration}]*" for i, playlist in enumerate(playlists)
         ]
 
         await send_embed(
