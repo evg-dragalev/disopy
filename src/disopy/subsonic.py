@@ -79,12 +79,12 @@ class Subsonic:
         return Song(title=atrib["title"], stream_url=stream_url)
     
     def build_playlist(self, atrib: dict[str, str]) -> Playlist:
-        duration: int = atrib["duration"]
+        duration: int = int(atrib["duration"]) if atrib["duration"].isdigit() else None
         return Playlist(
             name = atrib["name"],
             comment = atrib["comment"],
             song_count = atrib["songCount"],
-            duration = f'{duration // 3600}:{duration // 60 % 60}:{duration % 60}'
+            duration = f'{duration // 3600:02}:{duration // 60 % 60:02}:{duration % 60:02}'
         )
 
     def ping(self) -> bool:
