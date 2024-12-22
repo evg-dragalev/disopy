@@ -21,12 +21,13 @@ class Playlist:
 class Song:
     """Song model"""
 
-    full_title: str
+    album: str
     title: str
     song_title: str
     artist: str 
     stream_url: str
     id: str
+    duration: str
 
 
 class Subsonic:
@@ -79,9 +80,17 @@ class Subsonic:
     def build_song(self, atrib: dict[str, str]) -> Song:
         stream_url: str = self.build_url("/stream", {**self.params, "id": atrib["id"]})
         title: str = f'{atrib["artist"]} - {atrib["title"]}'
-        full_title: str = f'{atrib["title"] - atrib["album"] - atrib["artist"]}'
+        duration: int = int(atrib["duration"]) if atrib["duration"].isdigit() else None
         # Make a model of only the necessary data of the song
-        return Song(artist=atrib["artist"], song_title=atrib["title"], title=title, full_title=full_title, stream_url=stream_url, id=atrib["id"])
+        return Song(
+            artist=atrib["artist"],
+            song_title=atrib["title"],
+            title=title,
+            album=atrib["album"],
+            stream_url=stream_url,
+            id=atrib["id"]
+            duration = f'{duration // 3600:02}:{duration // 60 % 60:02}:{duration % 60:02}
+        )
     
     def build_playlist(self, atrib: dict[str, str]) -> Playlist:
         duration: int = int(atrib["duration"]) if atrib["duration"].isdigit() else None

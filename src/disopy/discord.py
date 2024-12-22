@@ -448,7 +448,7 @@ def start_client() -> None:
     ) -> list[app_commands.Choice[str]]:
         results: list[Song] = subsonic.search_songs(current)
         return [
-            app_commands.Choice(name=song.full_title, value=song.id)
+            app_commands.Choice(name=f"{song.title} ({song['duration']}) (from \"{song['album']}\")", value=song.id)
             for song in results[:25]
         ]
 
@@ -467,13 +467,13 @@ def start_client() -> None:
 
         # Try to find reference song by id
         print_info(f"Try to find song by id [{query}]")
-        song: Song | None = subsonic.get_song(query)
+        referenceSong: Song | None = subsonic.get_song(query)
         # If no result, try to find first from search by query
-        if song is None:
+        if referenceSong is None:
             print_info(f"Not found by id, try to find by query [{query}]")
-            song = subsonic.search_song(query)
+            referenceSong = subsonic.search_song(query)
 
-        if song is None:
+        if referenceSong is None:
             await send_embed(
                 interaction,
                 "Play similar",
@@ -484,7 +484,7 @@ def start_client() -> None:
 
 
         # get Similar songs
-        playlist: list[Song] | None = subsonic.get_similar_songs(song)
+        playlist: list[Song] | None = subsonic.get_similar_songs(referenceSong)
 
         if playlist is None:
             await send_embed(
@@ -515,6 +515,9 @@ def start_client() -> None:
             "All songs added to the queue",
         )
 
+        # Add reference song first, and then all similar to it
+        queue.add_to_queue(referenceSong, interaction)
+        print_info(f'Added the song "{referenceSong.title}" to the queue')
         for song in playlist:
             print_info(f'Added the song "{song.title}" to the queue')
             queue.add_to_queue(song, interaction)
