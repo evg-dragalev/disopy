@@ -89,9 +89,9 @@ class Subsonic:
             album=atrib["album"],
             stream_url=stream_url,
             id=atrib["id"],
-            duration = f'{duration // 3600:02}:{duration // 60 % 60:02}:{duration % 60:02}'
+            duration = f'{duration // 60:02}:{duration % 60:02}'
         )
-    
+
     def build_playlist(self, atrib: dict[str, str]) -> Playlist:
         duration: int = int(atrib["duration"]) if atrib["duration"].isdigit() else None
         return Playlist(

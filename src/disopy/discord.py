@@ -131,7 +131,7 @@ def start_client() -> None:
     ) -> list[app_commands.Choice[str]]:
         results: list[Song] = subsonic.search_songs(current)
         return [
-            app_commands.Choice(name=f"{song.title} ({song['duration']}) (from \"{song['album']}\")", value=song.id)
+            app_commands.Choice(name=f"{song.title} ({song.duration}) (from \"{song.album}\")", value=song.id)
             for song in results[:25]
         ]
 
