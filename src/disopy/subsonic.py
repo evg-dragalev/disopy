@@ -88,7 +88,7 @@ class Subsonic:
             title=title,
             album=atrib["album"],
             stream_url=stream_url,
-            id=atrib["id"]
+            id=atrib["id"],
             duration = f'{duration // 3600:02}:{duration // 60 % 60:02}:{duration % 60:02}'
         )
     
