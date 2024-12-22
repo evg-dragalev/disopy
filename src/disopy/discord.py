@@ -125,7 +125,18 @@ def start_client() -> None:
         queue.clear_queue(interaction)
         interaction.guild.voice_client.cleanup()
 
+    async def similar_autocomplete(
+        interaction: Interaction,
+        current: str
+    ) -> list[app_commands.Choice[str]]:
+        results: list[Song] = subsonic.search_songs(current)
+        return [
+            app_commands.Choice(name=f"{song.title} ({song['duration']}) (from \"{song['album']}\")", value=song.id)
+            for song in results[:25]
+        ]
+
     @tree.command(name="song", description="Play the searched song")
+    @app_commands.autocomplete(query=similar_autocomplete)
     @app_commands.describe(query="Search term to be played")
     async def song(interaction: Interaction, query: str) -> None:
         if interaction.user.voice is None:
@@ -137,7 +148,13 @@ def start_client() -> None:
             print_warn("The request failed as the user wasn't in a voice channel")
             return
 
-        song: Song | None = subsonic.search_song(query)
+        # Try to find reference song by id
+        print_info(f"Try to find song by id [{query}]")
+        song: Song | None = subsonic.get_song(query)
+        # If no result, try to find first from search by query
+        if song is None:
+            print_info(f"Not found by id, try to find by query [{query}]")
+            song = subsonic.search_song(query)
 
         if song is None:
             await send_embed(
@@ -441,16 +458,6 @@ def start_client() -> None:
             "\n".join(stylized_playlists),
         )
         print_info("Successfully listed playlists")            
-
-    async def similar_autocomplete(
-        interaction: Interaction,
-        current: str
-    ) -> list[app_commands.Choice[str]]:
-        results: list[Song] = subsonic.search_songs(current)
-        return [
-            app_commands.Choice(name=f"{song.title} ({song['duration']}) (from \"{song['album']}\")", value=song.id)
-            for song in results[:25]
-        ]
 
     @tree.command(name="similar", description="Generate playlist based on similar songs")
     @app_commands.autocomplete(query=similar_autocomplete)
