@@ -440,7 +440,86 @@ def start_client() -> None:
             "List playlists",
             "\n".join(stylized_playlists),
         )
-        print_info("Successfully listed playlists")
+        print_info("Successfully listed playlists")            
+
+    async def similar_autocomplete(
+        interaction: Interaction,
+        current: str
+    ) -> list[app_commands.Choice[str]]:
+        results: list[Song] = subsonic.search_songs(current)
+        return [
+            app_commands.Choice(name=song.full_title, value=song.id)
+            for song in results[:25]
+        ]
+
+    @tree.command(name="similar", description="Generate playlist based on similar songs")
+    @app_commands.autocomplete(query=similar_autocomplete)
+    @app_commands.describe(query="Search song to be used")
+    async def similar(interaction: Interaction, query: str):
+        if interaction.user.voice is None:
+            await send_embed(
+                interaction,
+                "Play similar",
+                "You need to join a voice channel first",
+            )
+            print_warn("The request failed as the user wasn't in a voice channel")
+            return
+
+        # Try to find reference song by id
+        print_info(f"Try to find song by id [{query}]")
+        song: Song | None = subsonic.get_song(query)
+        # If no result, try to find first from search by query
+        if song is None:
+            print_info(f"Not found by id, try to find by query [{query}]")
+            song = subsonic.search_song(query)
+
+        if song is None:
+            await send_embed(
+                interaction,
+                "Play similar",
+                "No song has been found",
+            )
+            print_warn("The request failed as the song wasn't found")
+            return
+
+
+        # get Similar songs
+        playlist: list[Song] | None = subsonic.get_similar_songs(song)
+
+        if playlist is None:
+            await send_embed(
+                interaction,
+                "Play similar",
+                "No playlist has been found",
+            )
+            print_warn("The request failed as no similar songs were found")
+            return
+
+        if playlist == []:
+            await send_embed(
+                interaction,
+                "Play similar",
+                "This playlist is empty",
+            )
+            print_warn("The request failed as similar songs list is empty")
+            return
+
+        if interaction.guild.voice_client is not None:
+            await interaction.guild.voice_client.move_to(interaction.user.voice.channel)
+        else:
+            await interaction.user.voice.channel.connect(self_deaf=True)
+
+        await send_embed(
+            interaction,
+            "Play similar",
+            "All songs added to the queue",
+        )
+
+        for song in playlist:
+            print_info(f'Added the song "{song.title}" to the queue')
+            queue.add_to_queue(song, interaction)
+
+        print_info("Successfully added all the songs from the playlist")
 
     async def start_bot() -> None:
         async with client:

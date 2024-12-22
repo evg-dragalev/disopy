@@ -21,10 +21,12 @@ class Playlist:
 class Song:
     """Song model"""
 
+    full_title: str
     title: str
     song_title: str
     artist: str 
     stream_url: str
+    id: str
 
 
 class Subsonic:
@@ -76,9 +78,10 @@ class Subsonic:
 
     def build_song(self, atrib: dict[str, str]) -> Song:
         stream_url: str = self.build_url("/stream", {**self.params, "id": atrib["id"]})
-
+        title: str = f'{atrib["artist"]} - {atrib["title"]}'
+        full_title: str = f'{atrib["title"] - atrib["album"] - atrib["artist"]}'
         # Make a model of only the necessary data of the song
-        return Song(artist=atrib["artist"], song_title=atrib["title"], title=f'{atrib["artist"]} - {atrib["title"]}', stream_url=stream_url)
+        return Song(artist=atrib["artist"], song_title=atrib["title"], title=title, full_title=full_title, stream_url=stream_url, id=atrib["id"])
     
     def build_playlist(self, atrib: dict[str, str]) -> Playlist:
         duration: int = int(atrib["duration"]) if atrib["duration"].isdigit() else None
@@ -120,6 +123,27 @@ class Subsonic:
 
         return album_songs
 
+    def search_songs(self, query: str) -> list[Song]:
+        """Search a song with a query and generates a list of Song models with the first result or empty if no one is found"""
+
+        self.info(f'Searching songs with the query "{query}"')
+
+        search_results: ET.Element = self.xml_request(
+            "/search3", {**self.params, "query": query}
+        )[0]
+
+        only_songs_results: list[ET.Element] = [
+            result
+            for result in search_results
+            if result.tag == "{http://subsonic.org/restapi}song"
+        ]
+
+        results: list[Song] = [
+            self.build_song(song.attrib) for song in only_songs_results
+        ]
+
+        return results
+    
     def search_song(self, query: str) -> Song | None:
         """Search a song with a query and generates a Song model with the first result or None if no one is found"""
 
@@ -215,3 +239,53 @@ class Subsonic:
         ]
 
         return playlists
+
+    def get_song(self, id: str) -> Song | None:
+        songById: ET.Element = self.xml_request("/getSong", {**self.params, "id": id})
+
+        only_songs_results: list[ET.Element] = [
+            result
+            for result in songById
+            if result.tag == "{http://subsonic.org/restapi}song"
+        ]
+
+        # Return None if no song is found
+        if len(only_songs_results) == 0:
+            self.warn(f"No song has been matched")
+            return None
+
+        first_song_result_metadata = only_songs_results[0].attrib
+
+        # Make a model of only the necessary data of the song
+        song: Song = self.build_song(first_song_result_metadata)
+        self.info(f'Matched the song "{song.title}"')
+
+        return song
+
+    def get_similar_songs(self, song: Song) -> list[Song] | None:
+        """Query list of songs similar to provided"""
+
+        self.info(f'Query songs similar to "{song.song_title}"')
+
+        search_results: ET.Element = self.xml_request(
+            "/getSimilarSongs", {**self.params, "id": song.id}
+        )[0]
+
+        similar_song_results: list[ET.Element] = [
+            result
+            for result in search_results
+            if result.tag == "{http://subsonic.org/restapi}song"
+        ]
+
+        # Return None if no album is found
+        if len(similar_song_results) == 0:
+            self.warn(f"No songs has been matched")
+            return None
+
+        similar_songs: list[Song] = [
+            self.build_song(entry.attrib) for entry in similar_song_results
+        ]
+
+        self.info(f'Matched "{len(similar_songs)}" similar songs')
+
+        return similar_songs
