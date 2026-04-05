@@ -25,6 +25,7 @@ class Env(NamedTuple):
     no_color: bool
     subsonic_password: str
     discord_token: str
+    opus_lib: str
 
 
 def get_env_variable(variable_name: str, disable_critical_message: bool = False) -> str | None:
@@ -62,6 +63,7 @@ def get_env(disable_critical_message: bool = False) -> Env | None:
 
     subsonic_password = get_env_variable("SUBSONIC_PASSWORD", disable_critical_message)
     discord_token = get_env_variable("DISCORD_TOKEN", disable_critical_message)
+    opus_lib = get_env_variable("OPUS_LIB", True)
 
     if subsonic_password is None or discord_token is None:
         return None
@@ -76,4 +78,5 @@ def get_env(disable_critical_message: bool = False) -> Env | None:
         no_color=no_color,
         subsonic_password=subsonic_password,
         discord_token=discord_token,
+        opus_lib=opus_lib
     )

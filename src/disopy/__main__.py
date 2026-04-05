@@ -60,7 +60,7 @@ def main() -> None:
     logger.info("Healthy Subsonic server status reported!")
 
     logger.info("Logging to Discord...")
-    get_bot(subsonic, config, options).run(
+    get_bot(subsonic, config, options, env).run(
         env.discord_token,
         # Enable discord.py debug logging only on verbosity level 2 as it prints a lot
         log_level=logging.DEBUG if options.debug >= 2 else logging.INFO,

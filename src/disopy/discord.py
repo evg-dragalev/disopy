@@ -7,6 +7,8 @@
 import logging
 from typing import Final
 
+import ctypes
+
 import discord
 from discord.ext.commands import Bot
 from knuckles import Subsonic
@@ -17,6 +19,7 @@ from .cogs.queue import QueueCog
 from .cogs.search import Search
 from .config import Config
 from .options import Options
+from .env import Env
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +50,26 @@ def check_command_tree_status(options: Options) -> bool:
     return status
 
 
-def get_bot(subsonic: Subsonic, config: Config, options: Options) -> Bot:
+def check_opus_loading(env: Env) -> None:
+    if discord.opus.is_loaded():
+        return
+
+    # check if disopy will be able to find_library
+    found_opus = ctypes.util.find_library('opus')
+    if found_opus is None:
+        opus_lib = env.opus_lib if env.opus_lib is not None else "libopus.so.0"
+        logger.info(f"Can't find 'opus' using discord.py approach. Will attemp to initiate opus loading using '${opus_lib}'.")
+        try:
+            logger.info(f"Trying to load: {opus_lib}")
+            discord.opus.load_opus('libopus.so.0')
+            logger.info(f" Successfully loaded {opus_lib}!")
+        except OSError as e:
+            # If loading fails, just continue to the next name
+            logger.info(f"Could not load {opus_lib}. Provide DISOPY_OPUS_LIB environment variable with your value. {e}")
+            pass
+
+
+def get_bot(subsonic: Subsonic, config: Config, options: Options, env: Env) -> Bot:
     """Get the Discord bot.
 
     Args:
@@ -73,6 +95,8 @@ def get_bot(subsonic: Subsonic, config: Config, options: Options) -> Bot:
         await bot.add_cog(Misc(bot, options, subsonic, config))
         await bot.add_cog(Search(bot, options, subsonic))
         await bot.add_cog(QueueCog(bot, options, subsonic, config))
+
+        check_opus_loading(env)
 
         logger.info("Checking if the Command Tree is up to date in the Discord API...")
         if not check_command_tree_status(options):
