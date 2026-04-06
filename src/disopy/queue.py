@@ -2,10 +2,22 @@ from .subsonic import Song
 from discord import Interaction
 import discord
 
+from .messages import info, warn, error
+from colorama import Fore, Style
 
 class Queue:
     def __init__(self) -> None:
         self.songs: dict[str, list[Song]] = {}
+        self.info: Callable[[str], None] = lambda message: info(
+            f"{Fore.MAGENTA}Queue{Style.RESET_ALL}", message
+        )
+        self.warn: Callable[[str], None] = lambda message: warn(
+            f"{Fore.MAGENTA}Queue{Style.RESET_ALL}", message
+        )
+        self.error: Callable[[str], None] = lambda message: error(
+            f"{Fore.MAGENTA}Queue{Style.RESET_ALL}", message
+        )
+        self.info("Queue __init__ end")
 
     def get_guild_queue(self, guild_id: int) -> list[Song]:
         if not guild_id in self.songs:
@@ -19,13 +31,16 @@ class Queue:
         self.get_guild_queue(interaction.guild_id).append(song)
 
         if not interaction.guild.voice_client.is_playing():
-            interaction.guild.voice_client.play(
-                discord.FFmpegPCMAudio(
-                    source=self.get_guild_queue(interaction.guild_id)[0].stream_url,
-                    before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-                ),
-                after=lambda e: self.next_in_queue(interaction, e),
-            )
+            try:
+                interaction.guild.voice_client.play(
+                    discord.FFmpegPCMAudio(
+                        source=self.get_guild_queue(interaction.guild_id)[0].stream_url,
+                        before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+                    ),
+                    after=lambda e: self.next_in_queue(interaction, e),
+                )
+            except Exception as e:
+                self.error(f"Got error when playing song in voice_client ${e}")
 
     def next_in_queue(
         self, interaction: Interaction, e: Exception | None = None
@@ -40,13 +55,16 @@ class Queue:
         if len(self.get_guild_queue(interaction.guild_id)) == 0:
             return
 
-        interaction.guild.voice_client.play(
-            discord.FFmpegPCMAudio(
-                source=self.get_guild_queue(interaction.guild_id)[0].stream_url,
-                before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
-            ),
-            after=lambda e: self.next_in_queue(interaction, e),
-        )
+        try:
+            interaction.guild.voice_client.play(
+                discord.FFmpegPCMAudio(
+                    source=self.get_guild_queue(interaction.guild_id)[0].stream_url,
+                    before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+                ),
+                after=lambda e: self.next_in_queue(interaction, e),
+            )
+        except Exception as e:
+            self.error(f"Got error when playing song in voice_client {e}")
 
     def play_again(self, interaction: Interaction) -> None:
         # Yeah this sucks

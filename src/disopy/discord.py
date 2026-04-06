@@ -9,6 +9,7 @@ import discord
 from discord import Interaction, app_commands
 from requests import Response
 from colorama import Fore, Style
+import ctypes
 
 
 def start_client() -> None:
@@ -28,6 +29,27 @@ def start_client() -> None:
 
     queue: Queue = Queue()
     subsonic: Subsonic = Subsonic()
+
+
+    def check_opus_loading() -> None:
+        if discord.opus.is_loaded():
+            return
+
+        # check if disopy will be able to find_library
+        found_opus = ctypes.util.find_library('opus')
+        if found_opus is None:
+            opus_lib = "libopus.so.0"
+            print_info(f"Can't find 'opus' using discord.py approach. Will attemp to initiate opus loading using '${opus_lib}'.")
+            try:
+                print_info(f"Trying to load: {opus_lib}")
+                discord.opus.load_opus('libopus.so.0')
+                print_info(f" Successfully loaded {opus_lib}!")
+            except OSError as e:
+                # If loading fails, just continue to the next name
+                print_info(f"Could not load {opus_lib}. Provide variable with your value. {e}")
+                pass
+
+    check_opus_loading()
 
     async def send_embed(
         interaction: Interaction, title: str, description: str
@@ -442,7 +464,7 @@ def start_client() -> None:
     async def playlists(interaction: Interaction):
 
         playlists: list[Playlist] = subsonic.get_playlists()
-        
+
         if len(playlists) == 0:
             await send_embed(interaction, "List playlists", "There are no playlists available")
             print_info("Successfully listed playlists")
@@ -457,7 +479,7 @@ def start_client() -> None:
             "List playlists",
             "\n".join(stylized_playlists),
         )
-        print_info("Successfully listed playlists")            
+        print_info("Successfully listed playlists")
 
     @tree.command(name="similar", description="Generate playlist based on similar songs")
     @app_commands.autocomplete(query=similar_autocomplete)
@@ -474,13 +496,13 @@ def start_client() -> None:
 
         # Try to find reference song by id
         print_info(f"Try to find song by id [{query}]")
-        referenceSong: Song | None = subsonic.get_song(query)
+        reference_song: Song | None = subsonic.get_song(query)
         # If no result, try to find first from search by query
-        if referenceSong is None:
+        if reference_song is None:
             print_info(f"Not found by id, try to find by query [{query}]")
-            referenceSong = subsonic.search_song(query)
+            reference_song = subsonic.search_song(query)
 
-        if referenceSong is None:
+        if reference_song is None:
             await send_embed(
                 interaction,
                 "Play similar",
@@ -491,7 +513,7 @@ def start_client() -> None:
 
 
         # get Similar songs
-        playlist: list[Song] | None = subsonic.get_similar_songs(referenceSong)
+        playlist: list[Song] | None = subsonic.get_similar_songs(reference_song)
 
         if playlist is None:
             await send_embed(
@@ -523,8 +545,8 @@ def start_client() -> None:
         )
 
         # Add reference song first, and then all similar to it
-        queue.add_to_queue(referenceSong, interaction)
-        print_info(f'Added the song "{referenceSong.title}" to the queue')
+        queue.add_to_queue(reference_song, interaction)
+        print_info(f'Added the song "{reference_song.title}" to the queue')
         for song in playlist:
             print_info(f'Added the song "{song.title}" to the queue')
             queue.add_to_queue(song, interaction)
